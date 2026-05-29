@@ -4,9 +4,9 @@ Antigravity TODO is a desktop-first productivity application built with **Flutte
 
 State management is powered by **Riverpod** with modern annotations and code generation, ensuring clean, scalable, and reactive data flow.
 
----
-
 ![Antigravity TODO App](Antigravity-TODO-App.png)
+
+---
 
 ## ✨ Features
 
