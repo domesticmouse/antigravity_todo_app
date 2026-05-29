@@ -37,6 +37,27 @@ class _TodoListViewState extends ConsumerState<TodoListView> {
     }
   }
 
+  Widget _proxyDecorator(Widget child, int index, Animation<double> animation) {
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (BuildContext context, Widget? child) {
+        final double animValue = Curves.easeOut.transform(animation.value);
+        final double scale = 1.0 + (0.02 * animValue);
+        return Transform.scale(
+          scale: scale,
+          child: Material(
+            elevation: 8.0,
+            borderRadius: BorderRadius.circular(12),
+            color: Theme.of(context).colorScheme.surface,
+            shadowColor: Colors.black.withValues(alpha: 0.15),
+            child: child!,
+          ),
+        );
+      },
+      child: child,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final todosAsync = ref.watch(todoListProvider);
@@ -51,43 +72,50 @@ class _TodoListViewState extends ConsumerState<TodoListView> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header with stats
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Text(
-                'Tasks',
-                style: theme.textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.5,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                '(${filteredTodos.length})',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  color: theme.hintColor.withValues(alpha: 0.6),
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const Spacer(),
-              // Shortcut hint
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: theme.hintColor.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  '⌘N to write',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: theme.hintColor.withValues(alpha: 0.8),
-                    fontFamily: 'Courier',
-                    fontWeight: FontWeight.bold,
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final showShortcut = constraints.maxWidth > 280;
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text(
+                    'Tasks',
+                    style: theme.textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.5,
+                    ),
                   ),
-                ),
-              ),
-            ],
+                  const SizedBox(width: 12),
+                  Text(
+                    '(${filteredTodos.length})',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      color: theme.hintColor.withValues(alpha: 0.6),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  if (showShortcut) ...[
+                    const Spacer(),
+                    // Shortcut hint
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: theme.hintColor.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        '⌘N to write',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: theme.hintColor.withValues(alpha: 0.8),
+                          fontFamily: 'Courier',
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              );
+            },
           ),
           const SizedBox(height: 24),
 
@@ -174,6 +202,7 @@ class _TodoListViewState extends ConsumerState<TodoListView> {
 
                 return ReorderableListView.builder(
                   buildDefaultDragHandles: false,
+                  proxyDecorator: _proxyDecorator,
                   itemCount: filteredTodos.length,
                   itemBuilder: (context, index) {
                     final todo = filteredTodos[index];
@@ -380,15 +409,19 @@ class _TodoItemCardState extends State<_TodoItemCard> {
                                       ),
                                     ),
                                     const SizedBox(width: 4),
-                                    Text(
-                                      '$completedSubtasks/$totalSubtasks subtasks',
-                                      style: theme.textTheme.bodySmall
-                                          ?.copyWith(
-                                            color: theme.hintColor.withValues(
-                                              alpha: 0.7,
+                                    Flexible(
+                                      child: Text(
+                                        '$completedSubtasks/$totalSubtasks subtasks',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: theme.textTheme.bodySmall
+                                            ?.copyWith(
+                                              color: theme.hintColor.withValues(
+                                                alpha: 0.7,
+                                              ),
+                                              fontWeight: FontWeight.w500,
                                             ),
-                                            fontWeight: FontWeight.w500,
-                                          ),
+                                      ),
                                     ),
                                   ],
                                 ],
