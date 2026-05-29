@@ -1,19 +1,20 @@
 # Implementation Plan - macOS Desktop Material 3 TODO App
 
-This plan details the design and structure for building a premium macOS desktop TODO application using Flutter, Material 3, Riverpod for state management, and SQLite for local data persistence.
+This plan details the design and structure for building a premium macOS desktop TODO application using Flutter, Material 3, Riverpod (using modern code-generation), and SQLite for local data persistence.
 
-In accordance with your rules, **no source code files in your workspace will be modified directly by the assistant.** Instead, the assistant will provide clear instructions and code snippets for you to apply.
+The assistant will directly create and modify all necessary source code files in the workspace.
 
 ---
 
 ## Technical Stack & Dependencies
 
-To implement this project, the following dependencies need to be added to `pubspec.yaml`:
+The following dependencies are defined in `pubspec.yaml`:
 
-1. **`flutter_riverpod`**: For state management.
+1. **`flutter_riverpod`** & **`riverpod_annotation`**: For modern reactive state management.
 2. **`sqflite`**: SQLite database engine for local persistence.
 3. **`path_provider`**: To locate the correct database storage directory on macOS.
 4. **`path`**: For secure cross-platform path construction.
+5. **`riverpod_generator`** & **`build_runner`**: (Dev dependencies) For code generation.
 
 ---
 
@@ -33,7 +34,7 @@ We will use a relational structure with two tables to support sub-tasks:
 | Column Name | Data Type | Constraints | Description |
 | :--- | :--- | :--- | :--- |
 | `id` | INTEGER | PRIMARY KEY AUTOINCREMENT | Unique ID of the sub-task |
-| `todo_id` | INTEGER | NOT NULL, FOREIGN KEY (REFERENCES `todos(id)` ON DELETE CASCADE) | Association with parent task |
+| `todo_id` | INTEGER | NOT NULL, FOREIGN KEY (todo_id) REFERENCES todos(id) ON DELETE CASCADE | Association with parent task |
 | `title` | TEXT | NOT NULL | Sub-task title |
 | `is_completed`| INTEGER | NOT NULL (0 or 1) | Whether the sub-task is completed |
 
@@ -45,54 +46,52 @@ We will organize the code into clean, modular layers under `lib`:
 
 ```
 lib/
-├── main.dart                  # App initialization, main layout (Two-column structure)
+├── main.dart                  # App entry, Riverpod ProviderScope, and Desktop Window wrapper
 ├── models/
-│   └── todo.dart              # Todo and SubTask data models (JSON serialization helper)
+│   └── todo.dart              # Todo and SubTask data models (JSON serialization helper & copyWith)
 ├── services/
-│   └── database_service.dart  # SQLite operations (CRUD for todos & subtasks)
+│   └── database_service.dart  # SQLite operations (CRUD for todos & subtasks with dual-query assembly)
 ├── providers/
-│   └── todo_provider.dart     # Riverpod StateNotifier to manage todo state
+│   └── todo_provider.dart     # Modern Riverpod Notifier classes (generated) managing filter/list/selected todo
 └── widgets/
-    ├── sidebar.dart           # Sidebar filter (All, Pending, Completed)
-    ├── todo_list_view.dart    # Task list with Material 3 styling
-    └── todo_detail_panel.dart # Right-side sliding panel for details and sub-tasks
+    ├── sidebar.dart           # Glassmorphic Sidebar filter (All, Pending, Completed) with counts
+    ├── todo_list_view.dart    # Task list with Material 3 styling, hover effects, quick-add
+    └── todo_detail_panel.dart # Sliding desktop detail panel for description & sub-tasks checklist
 ```
 
 ---
 
 ## Planned Code Implementations
 
-We will guide you through the creation/modification of the following files:
+We will create/modify the following files:
 
-### 1. `pubspec.yaml`
-Add dependencies for Riverpod, sqflite, and path helper libraries.
-
-### 2. `lib/models/todo.dart`
+### 1. `lib/models/todo.dart`
 Define:
 - `SubTask` with fields `id`, `todoId`, `title`, `isCompleted`.
 - `Todo` with fields `id`, `title`, `description`, `isCompleted`, and `List<SubTask> subTasks`.
-- Copy/clone helper methods (`copyWith`) to support immutable updates in Riverpod.
+- `copyWith` method on both classes to facilitate immutable state changes.
 
-### 3. `lib/services/database_service.dart`
+### 2. `lib/services/database_service.dart`
 Initialize the SQLite database on macOS, and provide CRUD operations:
-- `fetchTodos()`: Load all tasks with their subtasks using a SQL JOIN or multiple queries.
-- `insertTodo()`, `updateTodo()`, `deleteTodo()`
-- `insertSubTask()`, `updateSubTask()`, `deleteSubTask()`
+- `fetchTodos()`: Load all tasks and subtasks in two independent queries, joining in memory for optimal speed.
+- CRUD operations for `Todo` and `SubTask` (insert, update, delete). Note that database constraints are configured with `ON DELETE CASCADE` to clean up subtasks automatically.
 
-### 4. `lib/providers/todo_provider.dart`
-Expose:
+### 3. `lib/providers/todo_provider.dart`
+Expose using Riverpod Generator:
 - `TodoFilter`: Enum representing filters (All, Pending, Completed).
-- `activeFilterProvider`: StateProvider to manage the active filter.
-- `selectedTodoProvider`: StateProvider to manage which todo is currently selected (for the sliding detail panel).
-- `todoListProvider`: StateNotifierProvider that manages loading/updating todos via the `DatabaseService`.
+- `todoFilter`: `@riverpod` Notifier managing current active filter.
+- `selectedTodoId`: `@riverpod` Notifier managing selected todo ID.
+- `todoList`: `@riverpod` Notifier managing loading/updating todos via the `DatabaseService`.
+- `filteredTodoList`: `@riverpod` Provider to automatically calculate filtered list of todos.
 
-### 5. `lib/widgets/` Layout & UI Components
-- **Sidebar**: List-based selector for filters.
-- **Todo List**: Scrollable view of filtered tasks, complete button, and quick task insertion.
-- **Detail Panel**: Desktop-friendly slide-out drawer or split-view section showing description editor and checkbox subtask checklist.
+### 4. `lib/widgets/` Layout & UI Components
+- **Sidebar**: Translucent glassmorphic panel with navigation list showing filters and item counts.
+- **Todo List**: Scrollable view of filtered tasks, complete button, quick task insertion, hover animations.
+- **Detail Panel**: Desktop-friendly sliding side panel showing description text area and dynamic subtask list.
+- **Keyboard Shortcuts Listener**: High-level wrapper to capture `Cmd + N` (New task) and `Esc` (Close detail panel).
 
-### 6. `lib/main.dart`
-Re-write the main app file to use Riverpod `ProviderScope`, host the SQLite initialization inside `main()`, and arrange the screen layout using a row/split view containing `Sidebar`, `TodoListView`, and `TodoDetailPanel` side-by-side.
+### 5. `lib/main.dart`
+Initialize SQLite, wrap the app in Riverpod `ProviderScope`, and layout the screen in a clean 3-column split layout.
 
 ---
 
@@ -101,7 +100,8 @@ Re-write the main app file to use Riverpod `ProviderScope`, host the SQLite init
 ### Automated Verification
 We will verify that:
 1. `flutter pub get` runs successfully.
-2. The project compiles without any static analysis errors using `dart analyze`.
+2. Code generation runs via `flutter pub run build_runner build --delete-conflicting-outputs`.
+3. The project compiles without any static analysis errors using `dart analyze`.
 
 ### Manual Verification
 Once implemented, we will verify:
