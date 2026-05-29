@@ -1,10 +1,12 @@
-# Antigravity ToDo
+# Antigravity TODO App
 
-Antigravity ToDo is a premium, desktop-first productivity application built with **Flutter** and **Material 3**. Designed specifically for macOS (and scalable to other platforms), it features a highly polished three-column layout, fluid drag-and-drop reordering, interactive subtask checklists, and seamless local persistence using **SQLite**.
+Antigravity TODO is a desktop-first productivity application built with **Flutter** and **Material 3**. Designed specifically for macOS (and scalable to other platforms), it features a three-column layout, fluid drag-and-drop reordering, interactive subtask checklists, and seamless local persistence using **SQLite**.
 
 State management is powered by **Riverpod** with modern annotations and code generation, ensuring clean, scalable, and reactive data flow.
 
 ---
+
+![Antigravity TODO App](Antigravity-TODO-App.png)
 
 ## ✨ Features
 
